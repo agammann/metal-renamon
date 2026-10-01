@@ -84,6 +84,14 @@ public class EZ extends JPanel {
 
   /** Used for external referencing. */
   public static EZ app;
+  private static boolean browserReadyNotified = false;
+  private static native void browserReady();
+
+  /** Resolve bundled assets for desktop files or a browser virtual filesystem. */
+  public static File assetFile(String name) {
+    String root = System.getProperty("metalrenamon.assets");
+    return root == null ? new File(name) : new File(root, name);
+  }
   private static ArrayList<JFrame> 	openWindows = new ArrayList<>();
   private static ArrayList<Boolean> openWindowsStatus = new ArrayList<>();
   private static ArrayList<EZ> 		openWindowEz = new ArrayList<>();
@@ -227,13 +235,19 @@ public class EZ extends JPanel {
    * setFrameRate().
    */
   public static void refreshScreen() {
+    if (Boolean.getBoolean("metalrenamon.browser") && !browserReadyNotified) {
+      browserReadyNotified = true;
+      browserReady();
+    }
     timeDelta = System.currentTimeMillis() - lastUpdate;
     lastUpdate = System.currentTimeMillis();
     app.repaint();
     if (!updateASAP) {
       try {
         if(timeDelta > sleepTime){
-          Thread.sleep(sleepTime * 2 - timeDelta); 
+          long delay = sleepTime * 2 - timeDelta;
+          if (Boolean.getBoolean("metalrenamon.browser")) delay = Math.max(1, delay);
+          Thread.sleep(delay);
         }
         else {
           Thread.sleep(sleepTime);
@@ -949,6 +963,7 @@ public class EZ extends JPanel {
   public static int initialize(int width, int height) {
     String windowName = "ICS111";
     JFrame frame = new JFrame(windowName);
+    if (Boolean.getBoolean("metalrenamon.browser")) frame.setUndecorated(true);
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
     // Create and set up the content pane.
@@ -960,6 +975,10 @@ public class EZ extends JPanel {
     frame.setResizable(false);
     frame.pack();
     frame.setVisible(true);
+    if (Boolean.getBoolean("metalrenamon.browser")) {
+      newContentPane.setFocusable(true);
+      newContentPane.requestFocusInWindow();
+    }
     timeDelta = 0;
     lastUpdate = System.currentTimeMillis();
     
@@ -2240,7 +2259,11 @@ class EZImage extends EZElement {
     BufferedImage tempImg = checkLoadedImages(imgName);
     if (tempImg == null) {
       try {
-        tempImg = ImageIO.read(new File(imgName));
+        tempImg = ImageIO.read(EZ.assetFile(imgName));
+        if (Boolean.getBoolean("metalrenamon.browser") && tempImg != null) {
+          usedImageNames.add(imgName);
+          loadedImages.add(tempImg);
+        }
       }
       catch (IOException e) {
         System.out.println("ERROR: Unable to open specified imagefile:" + imgName);
@@ -2950,6 +2973,9 @@ class EZInteraction implements KeyListener, MouseInputListener {
       else if ( e.getKeyCode() == KeyEvent.VK_DOWN ) { keyToUse = "VK_DOWN"; valueToUse = e.getKeyCode(); }
       else if ( e.getKeyCode() == KeyEvent.VK_LEFT ) { keyToUse = "VK_LEFT"; valueToUse = e.getKeyCode(); }
       else if ( e.getKeyCode() == KeyEvent.VK_RIGHT ) { keyToUse = "VK_RIGHT"; valueToUse = e.getKeyCode(); }
+      else if (Boolean.getBoolean("metalrenamon.browser") && e.getKeyCode() >= KeyEvent.VK_A && e.getKeyCode() <= KeyEvent.VK_Z) {
+        keyToUse = "" + Character.toLowerCase((char) e.getKeyCode()); valueToUse = e.getKeyCode();
+      }
       else if ( ! Character.isLetterOrDigit( e.getKeyChar() ) ) { keyToUse = "kc" + e.getKeyCode(); valueToUse = e.getKeyCode(); }
       else {
         keyToUse = "" + e.getKeyChar();
@@ -2976,6 +3002,9 @@ class EZInteraction implements KeyListener, MouseInputListener {
       else if ( e.getKeyCode() == KeyEvent.VK_DOWN ) { keyToUse = "VK_DOWN"; valueToUse = e.getKeyCode(); }
       else if ( e.getKeyCode() == KeyEvent.VK_LEFT ) { keyToUse = "VK_LEFT"; valueToUse = e.getKeyCode(); }
       else if ( e.getKeyCode() == KeyEvent.VK_RIGHT ) { keyToUse = "VK_RIGHT"; valueToUse = e.getKeyCode(); }
+      else if (Boolean.getBoolean("metalrenamon.browser") && e.getKeyCode() >= KeyEvent.VK_A && e.getKeyCode() <= KeyEvent.VK_Z) {
+        keyToUse = "" + Character.toLowerCase((char) e.getKeyCode()); valueToUse = e.getKeyCode();
+      }
       else if ( ! Character.isLetterOrDigit( e.getKeyChar() ) ) { keyToUse = "kc" + e.getKeyCode(); valueToUse = e.getKeyCode(); }
       else { keyToUse = "" + e.getKeyChar(); valueToUse = e.getKeyCode(); }
       
@@ -3225,6 +3254,13 @@ class EZInteraction implements KeyListener, MouseInputListener {
  * @author Dylan Kobayashi
  */
 class EZSound {
+  private int browserSound = -1;
+  private float browserFrameRate;
+  private int browserFrameLength;
+  private static native int browserOpen(String file);
+  private static native void browserCommand(int handle, int command);
+  private static native double browserTime(int handle);
+  private static native void browserSeek(int handle, double seconds);
   protected static ArrayList<AudioInputStream> aisList = new ArrayList<AudioInputStream>();
   protected static ArrayList<String> aisFile = new ArrayList<String>();
 
@@ -3254,7 +3290,15 @@ class EZSound {
     }
     */
     try {
-      AudioInputStream ais = AudioSystem.getAudioInputStream(new File(file).getAbsoluteFile());
+      if (Boolean.getBoolean("metalrenamon.browser")) {
+        try (AudioInputStream ais = AudioSystem.getAudioInputStream(EZ.assetFile(file))) {
+          browserFrameRate = ais.getFormat().getFrameRate();
+          browserFrameLength = (int) ais.getFrameLength();
+        }
+        browserSound = browserOpen(file);
+        return;
+      }
+      AudioInputStream ais = AudioSystem.getAudioInputStream(EZ.assetFile(file).getAbsoluteFile());
       sound = AudioSystem.getClip();
       sound.open(ais);
     }
@@ -3271,6 +3315,7 @@ class EZSound {
    * 
    */
   public void play() {
+    if (browserSound >= 0) { browserCommand(browserSound, 1); return; }
     if( sound.getFramePosition() == sound.getFrameLength()  || 
         (sound.getFramePosition() != 0 && sound.isRunning()) ) {
       sound.setFramePosition(0);
@@ -3282,6 +3327,7 @@ class EZSound {
    * This will stop the sound and reset back to the start.
    */
   public void stop() {
+    if (browserSound >= 0) { browserCommand(browserSound, 2); return; }
     sound.stop();
     sound.setFramePosition(0);
   } // end stop()
@@ -3290,6 +3336,7 @@ class EZSound {
    *  Will pause the sound at it's current position. Using play() will resume from this point.
    */
   public void pause() {
+    if (browserSound >= 0) { browserCommand(browserSound, 3); return; }
     sound.stop();
   }
 
@@ -3298,6 +3345,7 @@ class EZSound {
    * 
    */
   public void loop() {
+    if (browserSound >= 0) { browserCommand(browserSound, 4); return; }
     sound.setFramePosition(0);
     sound.loop(Clip.LOOP_CONTINUOUSLY);
   }
@@ -3308,6 +3356,7 @@ class EZSound {
    * Otherwise -1 to indicate that the file's length cannot be determined.
    */
   public int getFrameLength() {
+    if (browserSound >= 0) return browserFrameLength;
     return sound.getFrameLength();
   }
   
@@ -3316,6 +3365,7 @@ class EZSound {
    * @return Positive int value including zero indicating the current frame.
    */
   public int getFramePosistion() {
+    if (browserSound >= 0) return (int) (browserTime(browserSound) * browserFrameRate);
     return sound.getFramePosition();
   }
   
@@ -3325,6 +3375,7 @@ class EZSound {
    * Otherwise -1 to indicate the file's length cannot be determined.
    */
   public long getMicroSecondLength() {
+    if (browserSound >= 0) return (long) (browserFrameLength * 1000000.0 / browserFrameRate);
     return sound.getMicrosecondLength();
   }
   
@@ -3334,6 +3385,7 @@ class EZSound {
    * Otherwise -1 to indicate the file's position cannot be determined.
    */
   public long getMicroSecondPosition() {
+    if (browserSound >= 0) return (long) (browserTime(browserSound) * 1000000.0);
     return sound.getMicrosecondPosition();
   }
   
@@ -3343,6 +3395,7 @@ class EZSound {
    * @param pos frame of the file to start from.
    */
   public void setFramePosition(int pos) {
+    if (browserSound >= 0) { browserSeek(browserSound, pos / (double) browserFrameRate); return; }
     sound.setFramePosition(pos);
   }
 
@@ -3354,6 +3407,7 @@ class EZSound {
    * @param pos milliseconds of the file to start from.
    */
   public void setMicrosecondPosition(int pos) {
+    if (browserSound >= 0) { browserSeek(browserSound, pos / 1000000.0); return; }
     sound.setMicrosecondPosition(pos);
   }
   

@@ -6,7 +6,29 @@ The player artwork uses the [Renamon sheet from Digimon Battle Spirit](https://w
 
 ![Renamon player poses](doc/metal-renamon-player-preview.png)
 
-## Run
+## Play in the browser
+
+Open [metal-renamon](https://agammann.github.io/metal-renamon/), click **Play**, and wait for the loading screen to finish. Click inside the game and press **O** to start. Use **P** to pause and **O** to resume. The **Fullscreen** button enlarges the game.
+
+A desktop browser, keyboard, and internet connection are required. The first launch downloads the Java runtime, images, and sounds, so it can take a while. The browser edition runs the existing Java game through [CheerpJ](https://cheerpj.com/); player, enemy, projectile, and main game code are shared with the desktop edition. Browser compatibility code in EZ resolves asset paths, handles frame timing, and plays the original sound files through browser audio.
+
+To preview the browser edition locally with Python 3:
+
+```sh
+python scripts/serve-browser.py
+```
+
+Open `http://127.0.0.1:8000/`. This server supports the HTTP byte ranges needed by the runtime.
+
+After editing Java sources, rebuild the browser JAR with a JDK 9 or later:
+
+```powershell
+./scripts/build-browser.ps1
+```
+
+Set `JAVA_HOME` to the JDK directory or put its tools on `PATH`. The JAR targets Java 8. GitHub Pages serves the repository's `master` branch from the root directory.
+
+## Run on desktop
 
 Requires a Java JDK 8 or later. From the repository root:
 

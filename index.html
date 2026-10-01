@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>metal-renamon — Play</title>
+  <meta name="description" content="Play metal-renamon in your browser. Renamon joins the original Metal Slug Java game with its weapons and gameplay preserved.">
+  <link rel="icon" href="Metal_Slug/PlayerStanding/0.png" type="image/png">
+  <link rel="stylesheet" href="web/player.css">
+</head>
+<body>
+  <header>
+    <h1><img src="Metal_Slug/PlayerStanding/0.png" alt="">metal-renamon</h1>
+    <button id="fullscreen" type="button">Fullscreen</button>
+  </header>
+  <main>
+    <section id="stage" aria-label="metal-renamon game">
+      <div id="display-shell"><iframe id="display" title="metal-renamon game" allow="autoplay"></iframe></div>
+      <div id="start-screen">
+        <img class="poster" src="web/start-screen.png" alt="metal-renamon game controls">
+        <div class="start-panel">
+          <button id="play" type="button">Play</button>
+          <p id="status" role="status" aria-live="polite">First launch downloads the game. A keyboard is required.</p>
+        </div>
+      </div>
+      <button id="exit-fullscreen" type="button">Exit fullscreen</button>
+    </section>
+    <p class="controls"><kbd>A</kbd><kbd>D</kbd> move <span>·</span> <kbd>W</kbd> aim up <span>·</span> <kbd>S</kbd> crouch <span>·</span> <kbd>Space</kbd> jump <span>·</span> <kbd>J</kbd> knife <span>·</span> <kbd>K</kbd> shoot <span>·</span> <kbd>L</kbd> grenade <span>·</span> <kbd>P</kbd> pause <span>·</span> <kbd>O</kbd> start / resume</p>
+    <p id="hint">Click the game, then press <kbd>O</kbd> to start.</p>
+  </main>
+  <footer>
+    <a href="https://github.com/agammann/metal-renamon">Source</a>
+    <span>Browser runtime: <a href="https://cheerpj.com/">CheerpJ</a></span>
+  </footer>
+  <script src="web/player.js"></script>
+</body>
+</html>
