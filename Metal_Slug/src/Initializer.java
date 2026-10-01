@@ -27,7 +27,7 @@ public class Initializer {
   private boolean finalwaveflag;
 
   // Pictures for Options screen
-  private EZImage title;             // Player controls
+  private EZText title;              // Game title
   private EZImage A;                 // Left
   private EZImage W;                 // Look up
   private EZImage S;                 // Crouch
@@ -85,7 +85,7 @@ public class Initializer {
       move = EZ.addText(500, 150, "Controls", Color.white, 50);
       O = EZ.addText(1300, 80, "Press 'O' to resume", Color.white, 35);
 
-      title = EZ.addImage("Title.gif", 740, 230);
+      title = EZ.addText(750, 105, "metal-renamon", Color.yellow, 32);
       A = EZ.addImage("Controls/A.png", 365, 420);
       W = EZ.addImage("Controls/W.png", 500, 300);
       S = EZ.addImage("Controls/S.png", 500, 420);

@@ -968,7 +968,7 @@ public class EZ extends JPanel {
     openWindowsStatus.add(true);
     openWindowEz.add(newContentPane);
     int wIndex = openWindows.size() - 1;
-    openWindows.get( wIndex ).setTitle("ICS 111 - Window index:" + wIndex);
+    openWindows.get( wIndex ).setTitle("metal-renamon");
     return wIndex;
   }
 
