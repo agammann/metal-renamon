@@ -32,13 +32,22 @@ play.addEventListener("click", () => {
   play.disabled = true;
   play.textContent = "Loading…";
   status.textContent = "Loading the game. This may take a moment on the first launch.";
-  display.src = new URL("web/game.html", document.baseURI).href;
+  const gameUrl = new URL("web/game.html", document.baseURI);
+  gameUrl.search = location.search;
+  display.src = gameUrl.href;
 });
 
 window.addEventListener("message", event => {
   if (event.origin !== location.origin || event.source !== display.contentWindow) return;
   if (event.data.type === "game-ready") {
     startScreen.hidden = true;
+  } else if (event.data.type === "game-restart") {
+    startScreen.hidden = false;
+    status.textContent = "Restarting the game…";
+    const gameUrl = new URL("web/game.html",document.baseURI);
+    gameUrl.search = location.search;
+    gameUrl.searchParams.set("restart","1");
+    display.src = gameUrl.href;
   } else if (event.data.type === "game-error" || event.data.type === "game-exit") {
     startScreen.hidden = false;
     play.textContent = "Reload game";

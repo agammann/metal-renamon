@@ -235,6 +235,7 @@ public class EZ extends JPanel {
    * setFrameRate().
    */
   public static void refreshScreen() {
+    if (BrowserRenderer.ENABLED) { BrowserRenderer.refresh(); return; }
     if (Boolean.getBoolean("metalrenamon.browser") && !browserReadyNotified) {
       browserReadyNotified = true;
       browserReady();
@@ -961,6 +962,7 @@ public class EZ extends JPanel {
    * @param height for the content area of the window.
    */
   public static int initialize(int width, int height) {
+    if (BrowserRenderer.ENABLED) { new EZ(width, height); return 0; }
     String windowName = "ICS111";
     JFrame frame = new JFrame(windowName);
     if (Boolean.getBoolean("metalrenamon.browser")) frame.setUndecorated(true);
@@ -2218,6 +2220,8 @@ class EZText extends EZElement {
  *
  */
 class EZImage extends EZElement {
+  protected int browserImageId = -1;
+  private int browserWidth, browserHeight;
   //used for drawing.
   protected double xCenter;
   protected double yCenter;
@@ -2283,7 +2287,10 @@ class EZImage extends EZElement {
    * @param y center coordinate.
    */
   public EZImage(String filename, int x, int y) {
-    img = tryLoadImage(filename);
+    if (BrowserRenderer.ENABLED) {
+      int[] info = BrowserRenderer.image(filename);
+      browserImageId = info[0]; browserWidth = info[1]; browserHeight = info[2];
+    } else img = tryLoadImage(filename);
     xCenter = x;
     yCenter = y;
   } // end constructor
@@ -2400,11 +2407,13 @@ class EZImage extends EZElement {
   
   @Override public int getHeight() {
     if(imgHasFocus) { return (ybrf - ytlf);  }
+    if (browserImageId >= 0) return browserHeight;
     return img.getHeight();
   }
   
   @Override public int getWidth() {
     if(imgHasFocus) { return (xbrf - xtlf);  } 
+    if (browserImageId >= 0) return browserWidth;
     return img.getWidth();
   }
 
@@ -3027,6 +3036,7 @@ class EZInteraction implements KeyListener, MouseInputListener {
    * @return true if the key is down. Otherwise false.
    */
   public static boolean isKeyDown(String key) {
+    if (BrowserRenderer.ENABLED) return key.length() == 1 && BrowserRenderer.down(key.charAt(0));
     try {
       return app.keysDown.containsKey(key);
     }
@@ -3046,7 +3056,7 @@ class EZInteraction implements KeyListener, MouseInputListener {
   /** Overload command to backwards compatible char call. */
   public static boolean isKeyDown(char c) { return isKeyDown("" + c); }
   /** Overload command to allow keycode checks. */
-  public static boolean isKeyDown(int code) { return app.keysDown.containsValue(code); }
+  public static boolean isKeyDown(int code) { return BrowserRenderer.ENABLED ? BrowserRenderer.down(code) : app.keysDown.containsValue(code); }
 
   /**
    * Checks if a key was just released. See description for getXMouseClick(), uses the same timing ideology.
@@ -3076,6 +3086,7 @@ class EZInteraction implements KeyListener, MouseInputListener {
    * Checks if a key was just pressed. See description for getXMouseClick(), uses the same timing ideology.
    * */
   public static boolean wasKeyPressed(String key) {
+    if (BrowserRenderer.ENABLED) return key.length() == 1 && BrowserRenderer.pressed(key.charAt(0));
     try {
       if (!keypCheckInitiated) {
         keypCheckInitiated = true;
@@ -3094,7 +3105,7 @@ class EZInteraction implements KeyListener, MouseInputListener {
   /** Overload command to backwards compatible char call. */
   public static boolean wasKeyPressed(char c) { return wasKeyPressed("" + c); }
   /** Overload command to allow keycode checks. */
-  public static boolean wasKeyPressed(int code) { wasKeyPressed(""); return app.keysPressed.containsValue(code); }
+  public static boolean wasKeyPressed(int code) { if (BrowserRenderer.ENABLED) return BrowserRenderer.pressed(code); wasKeyPressed(""); return app.keysPressed.containsValue(code); }
 
   
   @Override public void mousePressed(MouseEvent me) {

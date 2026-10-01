@@ -10,6 +10,7 @@
 
 import java.awt.event.KeyEvent;
 import java.awt.Color;
+import java.awt.Rectangle;
 import java.io.*;
 import java.lang.*;
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ public class Projectile {
   private static final int MAPXSIZE = 1450;
   private boolean using;                                                   // If projectile is currently on map
   private boolean projectileup;
+  private double previousX, previousY;
 
   // Master for animations
   public Projectile(int x, int y) {
@@ -227,10 +229,14 @@ public class Projectile {
       bullet.hide();
       bullet.translateTo(posx -= 250, posy += 50);
     }
+    previousX = posx;
+    previousY = posy;
   }
 
   // Controls movement and status of enemy projectiles
   public void processEnemyProjectile(int x, int y, int health) {
+    previousX = posx;
+    previousY = posy;
     // If within Map
     if (x < 1500) {
       if (type == "scientistBullet") {
@@ -421,6 +427,48 @@ public class Projectile {
   }
 
   // Processes the type of player's projectile
+  /** Advance once per game tick, retaining the original 42 substeps' total speed. */
+  public void advancePlayerProjectile() {
+    previousX = posx;
+    previousY = posy;
+    double speed = (type == "playerbullet" ? PLAYERSHOOTSPEED : PLAYERGRENADESPEED) * 42;
+    EZImage picture = type == "playerbullet" ? bullet : grenade;
+    if (projectileup) posy -= speed; else posx += speed;
+    if (type == "playergrenade") picture.rotateBy(PROJECTILEROTATE * 42);
+    else picture.rotateTo(projectileup ? -90 : 0);
+    picture.translateTo(posx,posy);
+    picture.show();
+    if (posx > MAPXSIZE || posy <= 10) consumePlayerProjectile();
+  }
+
+  private Rectangle sweptBounds(EZImage picture) {
+    int width = picture.getWorldWidth(), height = picture.getWorldHeight();
+    if (projectileup) { int swap = width; width = height; height = swap; }
+    int x = (int)Math.floor(Math.min(previousX,posx) - width / 2.0);
+    int y = (int)Math.floor(Math.min(previousY,posy) - height / 2.0);
+    return new Rectangle(x,y,(int)Math.ceil(Math.abs(posx-previousX)+width),
+      (int)Math.ceil(Math.abs(posy-previousY)+height));
+  }
+
+  public boolean hitsPlayer(Player player) {
+    return bullet.isShowing && sweptBounds(bullet).intersects(player.getHitBox());
+  }
+
+  public boolean hitsEnemy(Enemy enemy) {
+    EZImage picture = type == "playerbullet" ? bullet : grenade;
+    return using && enemy.getHealth() > 0 && sweptBounds(picture).intersects(enemy.getHitBox());
+  }
+
+  public void consumePlayerProjectile() {
+    EZImage picture = type == "playerbullet" ? bullet : grenade;
+    using = false;
+    picture.hide();
+    if (type == "playerbullet") bulletExplosionAnimation((int)posx,(int)posy);
+    else grenadeExplosionAnimation((int)posx,(int)posy);
+    projectileup = false;
+    picture.rotateTo(0);
+  }
+
   public void processProjectile(int x, int y) {
     if (type == "playerbullet" && projectileup == false) {
       translateBullet(x, y);
@@ -512,6 +560,7 @@ public class Projectile {
   // Controls player's grenade animation
   public void grenadeExplosionAnimation(int posx, int posy) {
     translateGrenadeExplosionAnimation(posx, posy);
+    if (BrowserRenderer.ENABLED) { BrowserRenderer.animate(projectileGrenade, 6); return; }
     for (int i = 0; i < GRENADEEXPLOSIONPICS; i++) {
       projectileGrenade[i].show();
       //EZ.refreshScreen();
@@ -525,6 +574,7 @@ public class Projectile {
   // Controls player's bullet animation
   public void bulletExplosionAnimation(int posx, int posy) {
     translateBulletExplosionAnimation(posx, posy);
+    if (BrowserRenderer.ENABLED) { BrowserRenderer.animate(projectileBullet, 6); return; }
     for (int i = 0; i < BULLETPICS; i++) {
       projectileBullet[i].show();
       //EZ.refreshScreen();

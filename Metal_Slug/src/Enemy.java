@@ -8,6 +8,7 @@
  * *************************** */
 
 import java.awt.Color;
+import java.awt.Rectangle;
 import java.lang.String;
 import java.io.*;
 import java.util.*;
@@ -146,8 +147,8 @@ public class Enemy {
     if (character == "airship") {
       posx = x;
       posy = y;
-      picture = EZ.addImage("EnemyAirShip/EnemyAirship.png", posx, posy);
-      death = EZ.addImage("EnemyAirShip/AirshipDeath.png", posx, posy);
+      picture = EZ.addImage("EnemyAirship/EnemyAirship.png", posx, posy);
+      death = EZ.addImage("EnemyAirship/AirshipDeath.png", posx, posy);
       flag = true;
       rangex = rx;
       rangey = ry;
@@ -198,6 +199,11 @@ public class Enemy {
     return posx;
   }
 
+  public Rectangle getHitBox() {
+    int width = picture.getWorldWidth(), height = picture.getWorldHeight();
+    return new Rectangle(posx - width / 2, posy - height / 2, width, height);
+  }
+
   // Return current y position
   public int getYCenter() {
     return posy;
@@ -210,81 +216,17 @@ public class Enemy {
 
   // Controls if player's projectiles hit enemy units
   public void collision() {
-    if (type == "scientist") {
-      health -= 2;
-      playerscore[0][0] += 10;
-
-      // Dead
-      if (health <= 0) {
-        translateFirstDeathPictures();
-        deadTriggers();
-      }
-      // Take away death pictures
-      if (health <= DEATHHP && alive_or_dead == true)
-        translateSecondDeathPictures();
-    }
-    if (type == "helicopter") {
-      health -= 2;
-      playerscore[0][0] += 10;
-      if (health <= 0) {
-        translateFirstDeathPictures();
-        deadTriggers();
-      }
-      if (health <= DEATHHP && alive_or_dead == true)
-        translateSecondDeathPictures();
-    }
-    if (type == "UFO") {
-      health -= 2;
-      playerscore[0][0] += 10;
-      if (health <= 0) {
-        translateFirstDeathPictures();
-        deadTriggers();
-      }
-      if (health <= 0 && alive_or_dead == true)
-        translateSecondDeathPictures();
-    }
-    if (type == "Tank") {
-      health -= 2;
-      playerscore[0][0] += 10;
-      if (health <= 0) {
-        translateFirstDeathPictures();
-        deadTriggers();
-      }
-      if (health <= DEATHHP && alive_or_dead == true)
-        translateSecondDeathPictures();
-    }
-    if (type == "zombie") {
-      health -= 2;
-      playerscore[0][0] += 10;
-      if (health <= 0) {
-        translateFirstDeathPictures();
-        deadTriggers();
-      }
-      if (health <= DEATHHP && alive_or_dead == true)
-        translateSecondDeathPictures();
-    }
-    if (type == "mecharobot") {
-      health -= 2;
-      playerscore[0][0] += 10;
-      if (health <= 0) {
-        translateFirstDeathPictures();
-        deadTriggers();
-      }
-      if (health <= DEATHHP && alive_or_dead == true)
-        translateSecondDeathPictures();
-    }
-    if (type == "airship") {
-      health -= 2;
-      playerscore[0][0] += 10;
-      if (health <= 0) {
-        translateFirstDeathPictures();
-        deadTriggers();
-      }
-      if (health <= DEATHHP && alive_or_dead == true)
-        translateSecondDeathPictures();
+    if (!alive_or_dead) return;
+    health -= 2;
+    playerscore[0][0] += 10;
+    if (health <= 0) {
+      picture.hide();
+      alive_or_dead = false;
+      deathcounter++;
+      deadTriggers();
+      if (BrowserRenderer.ENABLED) BrowserRenderer.animate(new EZImage[]{death}, 90);
     }
   }
-
   // Translates alive enemy pictures
   private void translateFirstDeathPictures() {
     picture.hide();

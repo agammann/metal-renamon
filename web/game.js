@@ -7,7 +7,7 @@ function startAudio(record) {
   });
 }
 function focusGame() {
-  document.querySelector("textarea:not([readonly])")?.focus();
+  browserRenderer.focus();
   for (const record of sounds) if (record.active && record.audio.paused) startAudio(record);
 }
 document.addEventListener("pointerup", () => setTimeout(focusGame, 0));
@@ -30,6 +30,7 @@ async function launch() {
     const jar = "/app" + new URL("metal-renamon.jar", document.baseURI).pathname;
     await cheerpjInit({version:17, status:"splash", enableInputMethods:false,
       natives:{
+        ...browserRenderer.natives,
         async Java_EZ_browserReady() { notify("game-ready"); focusGame(); },
         async Java_EZSound_browserOpen(lib, file) {
           const audio = new Audio(new URL("../Metal_Slug/" + file, document.baseURI).href);

@@ -11,6 +11,7 @@
 
 import java.awt.event.KeyEvent;
 import java.awt.Color;
+import java.awt.Rectangle;
 import java.io.*;
 import java.lang.*;
 
@@ -30,6 +31,7 @@ public class Player {
   private EZImage Victory;
   private EZImage Left;
   private int health;
+  private int damageTicks;
 
   // Holds animation pictures for each state
   private EZImage playerShooting[] = new EZImage[SHOOTINGPICS];
@@ -48,6 +50,7 @@ public class Player {
   // Player coordinates, current state, and sounds
   private int direction;
   private int posx = 0;
+  private double movementFraction;
   private int posy = 0;
   private int playerState;
   private EZSound reload;
@@ -327,6 +330,7 @@ public class Player {
   // Controls reload animation
   public void reloadAnimation(int posx, int posy) {
     translateReloadAnimation(posx, posy);
+    if (BrowserRenderer.ENABLED) { BrowserRenderer.animate(playerReload, DELAY + 1, this); return; }
     for (int i = 0; i < RELOADPICS; i++) {
       playerReload[i].show();
       EZ.refreshScreen();
@@ -478,12 +482,39 @@ public class Player {
 
   // Health for player
   public void collision() {
-    health--;
+    if (health <= 0 || damageTicks > 0) return;
+    health = Math.max(0, health - 80);
+    damageTicks = 90;
     gettinghit.play();
     //If dead
     if (health <= 0) {
-      //Currently player can't die
+      playerState = DEATH1;
+      hidePlayer();
+      Death1.show();
     }
+  }
+
+  /** Body bounds exclude the gun and follow crouching and jumping. */
+  public Rectangle getHitBox() {
+    return playerState == CROUCH ? new Rectangle(posx - 24, posy - 7, 48, 48)
+      : new Rectangle(posx - 24, posy - 39, 48, 78);
+  }
+
+  public void updateDamageFlash() {
+    if (isDamageFlashHidden()) hidePlayer();
+  }
+
+  public boolean isDamageFlashHidden() {
+    return health > 0 && damageTicks > 0 && (damageTicks / 9) % 2 == 0;
+  }
+
+  public void showCurrentPose() {
+    hidePlayer();
+    if (playerState == CROUCH) Crouch.show();
+    else if (playerState == JUMP) Jump.show();
+    else if (playerState == LAND) Land.show();
+    else if (playerState == UP) Up.show();
+    else Stand.show();
   }
 
   // Returns player health
@@ -494,6 +525,12 @@ public class Player {
   // Returns current x position
   public int getXpos() {
     return posx;
+  }
+
+  private void moveHorizontal(double delta) {
+    double next = Math.max(50, Math.min(MAPXLENGTH, posx + movementFraction + delta));
+    posx = (int)Math.floor(next);
+    movementFraction = next - posx;
   }
 
   // Returns current y position
@@ -557,6 +594,13 @@ public class Player {
 
   // Controls all actions and controls of player
   public char processPlayer() {
+    if (health <= 0) return 'h';
+    if (damageTicks > 0) damageTicks--;
+    boolean right = EZInteraction.isKeyDown('d'), left = EZInteraction.isKeyDown('a');
+    if (right != left) {
+      moveHorizontal(right ? MOVE_SPEED : -MOVE_SPEED);
+      translatePlayer(posx, posy);
+    }
     switch (playerState) {
       case STAND:
 
@@ -611,8 +655,6 @@ public class Player {
         }
         // Move right
         else if (EZInteraction.isKeyDown('d')) {
-          if (posx <= MAPXLENGTH)
-            posx += MOVE_SPEED;
           hidePlayer();
           //turnAnimation('d');
           walkingAnimation();
@@ -622,8 +664,6 @@ public class Player {
         }
         // Move left
         else if (EZInteraction.isKeyDown('a')) {
-          if (posx >= 50)
-            posx -= MOVE_SPEED;
           hidePlayer();
           //turnAnimation('a');
           translatePlayer(posx, posy);

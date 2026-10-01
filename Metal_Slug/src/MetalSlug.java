@@ -23,6 +23,7 @@ public class MetalSlug{
 		
 		// Scoreboard and victory sound
 		EZText scoreboard = EZ.addText(105, 35, "SCORE: 0", Color.white, 30);
+		EZText healthDisplay = EZ.addText(380, 35, "HEALTH: 800 / 800", Color.white, 30);
 		EZSound victory1 = EZ.addSound("Sounds/Victory.wav");
 		EZSound victory2 = EZ.addSound("Sounds/Victory1.wav");
 		
@@ -176,15 +177,17 @@ public class MetalSlug{
 		    spacebar - jump
 		 */
 
+		BrowserRenderer.start();
 		// Main game loop
 		while(true)
 		{  
 			// Move background map and update score
 			map.translateObject(.5, 300);
 			scoreboard.setMsg("SCORE: "+ units[0].getPlayerScore());
+			healthDisplay.setMsg("HEALTH: " + player.getHealth() + " / 800");
 			
 			// Pause game with 'p'
-			if(EZInteraction.isKeyDown('p'))
+			if(EZInteraction.wasKeyPressed('p') || EZInteraction.isKeyDown('p'))
 			{
 				pauseflag = true;
 				control.pullToFront();
@@ -274,15 +277,8 @@ public class MetalSlug{
 			}
 			
 			// Process player's projectiles
-			for(int i = 0; i < UNITS_AND_PROJECTILES; i++)
-			{
-				for(int j = 0; j < BULLETS; j++)
-					if(bullets[j].beingUsed() == true)
-						bullets[j].processProjectile(units[i].getXCenter(), units[i].getYCenter());
-				for(int j = 0; j < GRENADES; j++)
-					if(grenades[j].beingUsed() == true)
-						grenades[j].processProjectile(units[i].getXCenter(), units[i].getYCenter());		
-			}
+			for (Projectile bullet : bullets) if (bullet.beingUsed()) bullet.advancePlayerProjectile();
+			for (Projectile grenade : grenades) if (grenade.beingUsed()) grenade.advancePlayerProjectile();
 			
 			// Controls movement for enemy units
 			for(int i = 0; i < UNITS_AND_PROJECTILES; i++)
@@ -291,22 +287,33 @@ public class MetalSlug{
 			// Check if player's projectiles collide with enemy units
 			for(int j = 0; j < UNITS_AND_PROJECTILES; j++)
 			{
-				for(int i = 0; i < BULLETS; i++)
-					if(bullets[i].beingUsed() == true)
-						if(bullets[i].isPointInElement(units[j].getXCenter(), units[j].getYCenter()) && units[j].getAliveOrDead() == true)
-							units[j].collision();
-				for(int i = 0; i < GRENADES; i++)
-					if(grenades[i].beingUsed() == true)
-						if(grenades[i].isPointInElement(units[j].getXCenter(), units[j].getYCenter()) && units[j].getAliveOrDead() == true)
-							units[j].collision();
+				for (Projectile bullet : bullets) if (bullet.hitsEnemy(units[j])) {
+					units[j].collision(); bullet.consumePlayerProjectile();
+				}
+				for (Projectile grenade : grenades) if (grenade.hitsEnemy(units[j])) {
+					units[j].collision(); grenade.consumePlayerProjectile();
+				}
 			}
 			
 			// Move enemy projectiles across map, resets if out of map
 			for(int i = 0; i < UNITS_AND_PROJECTILES; i++)
 				enemyProjectiles[i].processEnemyProjectile(units[i].getXCenter(), units[i].getYCenter(), units[i].getHealth());
 			for(int i = 0; i < UNITS_AND_PROJECTILES; i++)
-				if(enemyProjectiles[i].isPointInElement(player.getXpos(), player.getYpos()))
-						player.collision();
+				if(enemyProjectiles[i].hitsPlayer(player)) {
+					player.collision();
+					enemyProjectiles[i].resetEnemyProjectile(units[i].getXCenter(), units[i].getYCenter());
+				}
+			player.updateDamageFlash();
+			healthDisplay.setMsg("HEALTH: " + player.getHealth() + " / 800");
+			healthDisplay.setColor(player.getHealth() <= 240 ? Color.red : Color.white);
+			if (player.getHealth() == 0) {
+				EZ.addText(750, 240, "GAME OVER", Color.white, 60);
+				EZ.addText(750, 320, BrowserRenderer.ENABLED ? "Press R to restart" : "Close and restart the game", Color.white, 32);
+				while (true) {
+					EZ.refreshScreen();
+					if (BrowserRenderer.ENABLED && EZInteraction.wasKeyPressed('r')) BrowserRenderer.restart();
+				}
+			}
 			
 			// Win
 			if(units[25].returnDeathcounter() == DEATHCOUNTER)
